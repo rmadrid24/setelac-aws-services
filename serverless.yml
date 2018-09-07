@@ -1,0 +1,90 @@
+service:
+  name: setelac-aws-services
+  publish: false # disable auto-publishing to the Serverless platform
+
+plugins:
+  - serverless-appsync-plugin
+  - serverless-webpack
+  - serverless-webpack
+
+provider:
+  name: aws
+  runtime: nodejs6.10
+
+functions:
+  graphql:
+    handler: handler.graphqlHandler
+
+custom:
+  accountId: 833201972695
+  appSync:
+    name: Servicios Tecnicos SETELAC
+    authenticationType: AMAZON_COGNITO_USER_POOLS
+    userPoolConfig:
+      awsRegion: us-east-1
+      defaultAction: ALLOW
+      userPoolId: us-east-1:6722c8ee-1742-4d8f-9ec6-88d74452222e
+    # region: # defaults to provider region
+    # mappingTemplatesLocation: # defaults to mapping-templates
+    mappingTemplates:
+      - dataSource: Lambda
+        type: Query
+        field: getPost
+        request: "getPost-request-mapping-template.vtl"
+        response: "getPost-response-mapping-template.vtl"
+      - dataSource: Lambda
+        type: Query
+        field: allPosts
+        request: "allPosts-request-mapping-template.vtl"
+        response: "allPosts-response-mapping-template.vtl"
+      - dataSource: Lambda
+        type: Mutation
+        field: addPost
+        request: "addPost-request-mapping-template.vtl"
+        response: "addPost-response-mapping-template.vtl"
+      - dataSource: Lambda
+        type: Post
+        field: relatedPosts
+        request: "relatedPosts-request-mapping-template.vtl"
+        response: "relatedPosts-response-mapping-template.vtl" 
+    # schema: # defaults schema.graphql
+    serviceRole: "AppSyncServiceRole"
+    dataSources:
+      - type: AWS_LAMBDA
+        name: Lambda
+        description: 'Lambda DataSource'
+        config:
+          lambdaFunctionArn: { Fn::GetAtt: [GraphqlLambdaFunction, Arn] }
+          serviceRoleArn: { Fn::GetAtt: [AppSyncLambdaServiceRole, Arn] }
+  serverless-offline:
+    port: 4000
+
+resources:
+  Resources:
+    AppSyncLambdaServiceRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        RoleName: "Lambda-${self:custom.appSync.serviceRole}"
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            -
+              Effect: "Allow"
+              Principal:
+                Service:
+                  - "appsync.amazonaws.com"
+              Action:
+                - "sts:AssumeRole"
+        Policies:
+          -
+            PolicyName: "Lambda-${self:custom.appSync.serviceRole}-Policy"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                -
+                  Effect: "Allow"
+                  Action:
+                    - "lambda:invokeFunction"
+                  Resource:
+                    - "arn:aws:lambda:us-east-1:${self:custom.accountId}:function:appsync-setelac-dev-graphql"
+                    - "arn:aws:lambda:us-east-1:${self:custom.accountId}:function:appsync-setelac-dev-graphql:*"
