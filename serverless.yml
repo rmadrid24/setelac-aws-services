@@ -5,7 +5,6 @@ service:
 plugins:
   - serverless-appsync-plugin
   - serverless-webpack
-  - serverless-webpack
 
 provider:
   name: aws
@@ -23,7 +22,7 @@ custom:
     userPoolConfig:
       awsRegion: us-east-1
       defaultAction: ALLOW
-      userPoolId: us-east-1:6722c8ee-1742-4d8f-9ec6-88d74452222e
+      userPoolId: us-east-1_NoHqFSxNu
     # region: # defaults to provider region
     # mappingTemplatesLocation: # defaults to mapping-templates
     mappingTemplates:
@@ -86,5 +85,5 @@ resources:
                   Action:
                     - "lambda:invokeFunction"
                   Resource:
-                    - "arn:aws:lambda:us-east-1:${self:custom.accountId}:function:appsync-setelac-dev-graphql"
-                    - "arn:aws:lambda:us-east-1:${self:custom.accountId}:function:appsync-setelac-dev-graphql:*"
+                    - "arn:aws:lambda:us-east-1:${self:custom.accountId}:function:${self:service}-${self:provider.stage}-graphql"
+                    - "arn:aws:lambda:us-east-1:${self:custom.accountId}:function:${self:service}-${self:provider.stage}-graphql:*"
