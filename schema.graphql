@@ -1,24 +1,30 @@
 schema {
-    query: Query
     mutation: Mutation
+    query: Query
 }
 
 type Query {
-    getPost(id:ID!): Post
-    allPosts: [Post]
+    dummy: String
 }
 
 type Mutation {
-    addPost(id: ID!, author: String!, title: String, content: String, url: String): Post!
+    addOrder(order: OrderInput): Order!
 }
 
-type Post {
-    id: ID!
-    author: String!
-    title: String
-    content: String
-    url: String
-    ups: Int
-    downs: Int
-    relatedPosts: [Post]
+input OrderInput {
+    orderId: String!
+    serviceOrderId: String!
+    timeCompleted: String
+    action: String!
+    location: String
+}
+
+type Order {
+    orderId: ID!
+    serviceOrderId: String
+    timeSubmitted: String
+    timeCompleted: String
+    location: String
+    completed: Boolean
+    action: String
 }

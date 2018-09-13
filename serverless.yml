@@ -8,11 +8,24 @@ plugins:
 
 provider:
   name: aws
-  runtime: nodejs6.10
+  runtime: nodejs8.10
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: 
+        - "Fn::GetAtt": [ OrdersTable, Arn ]
 
 functions:
   graphql:
     handler: handler.graphqlHandler
+  testOrders:
+    handler: handler.dynamoHandler
 
 custom:
   accountId: 833201972695
@@ -27,25 +40,10 @@ custom:
     # mappingTemplatesLocation: # defaults to mapping-templates
     mappingTemplates:
       - dataSource: Lambda
-        type: Query
-        field: getPost
-        request: "getPost-request-mapping-template.vtl"
-        response: "getPost-response-mapping-template.vtl"
-      - dataSource: Lambda
-        type: Query
-        field: allPosts
-        request: "allPosts-request-mapping-template.vtl"
-        response: "allPosts-response-mapping-template.vtl"
-      - dataSource: Lambda
         type: Mutation
-        field: addPost
-        request: "addPost-request-mapping-template.vtl"
-        response: "addPost-response-mapping-template.vtl"
-      - dataSource: Lambda
-        type: Post
-        field: relatedPosts
-        request: "relatedPosts-request-mapping-template.vtl"
-        response: "relatedPosts-response-mapping-template.vtl" 
+        field: addOrder
+        request: "addOrder-request-mapping-template.vtl"
+        response: "addOrder-response-mapping-template.vtl"
     # schema: # defaults schema.graphql
     serviceRole: "AppSyncServiceRole"
     dataSources:
@@ -60,6 +58,27 @@ custom:
 
 resources:
   Resources:
+    OrdersTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        KeySchema:
+          -
+            AttributeName: orderId
+            KeyType: HASH
+          -
+            AttributeName: timeSubmitted
+            KeyType: RANGE    
+        AttributeDefinitions:
+          -
+            AttributeName: orderId
+            AttributeType: S
+          -
+            AttributeName: timeSubmitted
+            AttributeType: S
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: 'Orders'
     AppSyncLambdaServiceRole:
       Type: "AWS::IAM::Role"
       Properties:

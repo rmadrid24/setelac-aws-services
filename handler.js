@@ -1,51 +1,87 @@
+const AWS = require('aws-sdk');
+const dynamoDb = new AWS.DynamoDB.DocumentClient();
+
+exports.dynamoHandler = (event, context, callback) => {
+    const params = {
+        TableName: 'Orders',
+    };
+    // fetch all todos from the database
+    dynamoDb.scan(params, (error, result) => {
+        // handle potential errors
+        if (error) {
+            console.error(error);
+            callback(null, {
+                statusCode: error.statusCode || 501,
+                headers: { 'Content-Type': 'text/plain' },
+                body: 'Couldn\'t fetch the orders.',
+            });
+            return;
+        }
+
+        // create a response
+        const response = {
+            statusCode: 200,
+            body: JSON.stringify(result.Items),
+        };
+        callback(null, response);
+    });
+};
+
+async function addOrder(order) {
+
+    const params = {
+        TableName: 'Orders',
+        item: {
+            ...order,
+            timeSubmitted: new Date().toISOString()
+        }
+    };
+
+    try {
+        data = await dynamoDb.putItem(params).promise();
+    }
+    catch (err) {
+        console.log(err);
+        return err;
+    }
+    return data;
+    // return dynamoDb.putItem(params).promise();
+}
+
 exports.graphqlHandler = (event, context, callback) => {
-  console.log("Received event {}", JSON.stringify(event, 3));
-  var posts = {
-       "1": {"id": "1", "title": "First book", "author": "Author1", "url": "https://amazon.com/", "content": "SAMPLE TEXT AUTHOR 1 SAMPLE TEXT AUTHOR 1 SAMPLE TEXT AUTHOR 1 SAMPLE TEXT AUTHOR 1 SAMPLE TEXT AUTHOR 1 SAMPLE TEXT AUTHOR 1", "ups": "100", "downs": "10"},
-       "2": {"id": "2", "title": "Second book", "author": "Author2", "url": "https://amazon.com", "content": "SAMPLE TEXT AUTHOR 2 SAMPLE TEXT AUTHOR 2 SAMPLE TEXT", "ups": "100", "downs": "10"},
-       "3": {"id": "3", "title": "Third book", "author": "Author3", "url": null, "content": null, "ups": null, "downs": null },
-       "4": {"id": "4", "title": "Fourth book", "author": "Author4", "url": "https://www.amazon.com/", "content": "SAMPLE TEXT AUTHOR 4 SAMPLE TEXT AUTHOR 4 SAMPLE TEXT AUTHOR 4 SAMPLE TEXT AUTHOR 4 SAMPLE TEXT AUTHOR 4 SAMPLE TEXT AUTHOR 4 SAMPLE TEXT AUTHOR 4 SAMPLE TEXT AUTHOR 4", "ups": "1000", "downs": "0"},
-       "5": {"id": "5", "title": "Fifth book", "author": "Author5", "url": "https://www.amazon.com/", "content": "SAMPLE TEXT AUTHOR 5 SAMPLE TEXT AUTHOR 5 SAMPLE TEXT AUTHOR 5 SAMPLE TEXT AUTHOR 5 SAMPLE TEXT", "ups": "50", "downs": "0"} };
+    switch (event.field) {
+        case 'addOrder':
+            const { order } = event.arguments;
+            const params = {
+                Item: {
+                    ...order,
+                    timeSubmitted: new Date().toISOString()
+                },
+                TableName: "Orders"
+            };
 
-  var relatedPosts = {
-      "1": [posts['4']],
-      "2": [posts['3'], posts['5']],
-      "3": [posts['2'], posts['1']],
-      "4": [posts['2'], posts['1']],
-      "5": []
-  };
+            dynamoDb.put(params)
+                .then((result) => {
+                    callback(null, params.Item);
+                })
+                .catch(err => {
+                    console.log('error', err);
+                    callback(null, null);
+                })
+            // dynamoDb.put(params, (error, result) => {
+            //     // handle potential errors
+            //     console.log('data', error, result);
+            //     if (error) {
+            //         console.error(error);
+            //         callback(null, null);
+            //         return;
+            //     }
 
-  console.log("Got an Invoke Request.");
-  switch(event.field) {
-      case "getPost":
-          var id = event.arguments.id;
-          callback(null, posts[id]);
-          break;
-      case "allPosts":
-          var values = [];
-          for(var d in posts){
-              values.push(posts[d]);
-          }
-          callback(null, values);
-          break;
-      case "addPost":
-          // return the arguments back
-          callback(null, event.arguments);
-          break;
-      case "addPostErrorWithData":
-          var id = event.arguments.id;
-          var result = posts[id];
-          // attached additional error information to the post
-          result.errorMessage = 'Error with the mutation, data has changed';
-          result.errorType = 'MUTATION_ERROR';
-          callback(null, result);
-          break;
-      case "relatedPosts":
-          var id = event.source.id;
-          callback(null, relatedPosts[id]);
-          break;
-      default:
-          callback("Unknown field, unable to resolve" + event.field, null);
-          break;
-  }
+            //     callback(null, params.Item);
+            // });
+            break;
+        default:
+            callback("Unknown field, unable to resolve" + event.field, null);
+            break;
+    }
 };
